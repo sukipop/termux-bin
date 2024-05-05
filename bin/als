@@ -1,0 +1,75 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+
+# Function to display help message
+function print_usage {
+    print "Usage: $script_name [options] <file>"
+    print
+    print "This script facilitates the management of Zsh aliases by providing an easy interface to select and edit alias files."
+    print
+    print "Options:"
+    print "-h, --help      Display this help message."
+    print
+}
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Ensure 'ZSH_ALIAS_DIR' is set
+if [[ -z "$ZSH_ALIAS_DIR" ]]; then
+    error "Unset variable: ZSH_ALIAS_DIR"
+    exit 1
+fi
+
+# Ensure 'ZSH_ALIAS_DIR' exists
+if [[ ! -d "$ZSH_ALIAS_DIR" ]]; then
+    error "Missing directory: $ZSH_ALIAS_DIR"
+    exit 1
+fi
+
+# Ensure 'ZSH_ALIAS_DIR' is not empty
+if [[ -z $(ls "$ZSH_ALIAS_DIR") ]]; then
+    error "No alias configuration files found in $ZSH_ALIAS_DIR"
+    exit 1
+fi
+
+# Parse arguments
+alias_file=""
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --help|--help-all|-h|-help|h|help)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            exit 1
+            ;;
+        *)
+            if [[ -n "$alias_file" ]]; then
+                error "Unknown argument: $1"
+                exit 1
+            fi
+            alias_file="$1"
+            ;;
+    esac
+    shift
+done
+
+
+# List and select an alias file if 'alias_file' is unset
+if [[ -z "$alias_file" ]]; then
+    alias_file=$(gum choose --limit=1 --select-if-one $(ls "${ZSH_ALIAS_DIR}"))
+fi
+
+# Edit the selected alias file
+if [[ -z "$alias_file" ]]; then
+    error "No file selected or available for editing."
+    exit 1
+fi
+
+nano "$ZSH_ALIAS_DIR/$alias_file"
