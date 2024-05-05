@@ -1,0 +1,60 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+
+# Function to display help message
+function print_usage {
+    print "Usage: $script_name [options]"
+    print
+    print "Print a stylized debugging message."
+    print
+    print "Options:"
+    print "  -h, --help       Show this help message and exit"
+    print "  -H, --header     Specify a header for the debug message"
+}
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Function to print stylized debug message
+function print_debug_message {
+    local message="${1:-foo bar}"
+    local color="${COLOR_BLUE:-#64b5f6}"
+    print -P "%B%F{$color}$header%f:%b $message" 1>&2
+}
+
+# Parse arguments
+header="Debug"
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --help|--help-all|-h|-help|h|help)
+            print_usage
+            exit 0
+            ;;
+        -H|--header)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                error "Missing or invalid option for $1"
+                print_usage
+                exit 1
+            else
+                header="$2"
+                shift
+            fi
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            message="$1"
+            break
+            ;;
+    esac
+    shift
+done
+
+print_debug_message "$message"
