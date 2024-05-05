@@ -1,0 +1,46 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+message="Unknown error"
+
+# Function to display help message
+function print_usage {
+    print "Usage: $script_name [options] <message>"
+    print
+    print "Print a stylized error message."
+    print
+    print "Options:"
+    print "  -h, --help       Show this help message and exit"
+}
+
+# Function to print error message
+function print_error_message {
+    local message="${1:-me, senpai!}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}ERROR%f:%b $message" 1>&2
+}
+
+# Use ERRMSG if defined
+if [[ -n "$ERRMSG" ]]; then
+    message="$ERRMSG"
+fi
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --help|--help-all|-h|-help|h|help)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            print_error_message "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            message="$1"
+            ;;
+    esac
+    shift
+done
+
+print_error_message "$message"
