@@ -1,36 +1,43 @@
-#!/data/data/com.termux/files/usr/bin/zsh
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
 
-function help {
-    print "Usage: colors — Display a dazzling grid of terminal colors."
-          "Options:"
-          "  -h, --help    Show this help message and exit."
-          "  -c, --clear   Clears the terminal screen before displaying the colors."
+function print_usage {
+    print "Usage: $script_name"
+    print
+    print "Display a grid of terminal colors."
+    print
+    print "Options:"
+    print "  -h, --help    Show this help message."
+    print
 }
 
-function parse_options {
-    while [[ "$#" -gt 0 ]]; do
-        case "$1" in
-            -h|--help|--help-all)
-                help
-                exit 0
-                ;;
-            -c|--clear)
-                clear
-                ;;
-            *)
-                error "Unknown option: ${1}"
-                exit 1
-                ;;
-        esac
-        shift
-    done
+function error {
+    local errmsg="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%F{$color}%BError%f%b: $errmsg" >&2
+    print_usage
 }
 
-function main {
-    parse_options "$@"
-    for i in {0..255}; do
-        print -Pn "%K{$i}  %k${(l:3::0:)i} " ${${(M)$((i%6)):#3}:+$'\n'}
-    done
-}
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -h|--help|-help|help|h)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            exit 1
+            ;;
+        *)
+            error "Unknown argument: $1"
+            exit 1
+            ;;
+    esac
+    shift
+done
 
-main "$@" || exit 1
+# Print terminal colors
+for i in {0..255}; do
+    print -Pn "%K{$i}  %k${(l:3::0:)i} " ${${(M)$((i%6)):#3}:+$'\n'}
+done
