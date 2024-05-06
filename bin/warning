@@ -1,0 +1,52 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+message="Something is probably broken!"
+
+# Function to display help message
+function print_usage {
+    print "Usage: $script_name [options] <message>"
+    print
+    print "Print a stylized warning message."
+    print
+    print "Arguments:"
+    print "  <message>        Message to print."
+    print
+    print "Options:"
+    print "  -h, --help       Show this help message."
+    print
+}
+
+# Function to print error message
+function error {
+    local errmsg="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $errmsg" >&2
+}
+
+# Function to print stylized warning message
+function print_warning_message {
+    local color="${COLOR_ORANGE:-#f57c00}"
+    print -P "%B%F{$color}Warning%f:%b $1" 1>&2
+}
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -h|--help|--help-all|-help|help)
+            help_message
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            exit 1
+            ;;
+        *)
+            message="$1"
+            break
+            ;;
+    esac
+    shift
+done
+
+# Print warning message
+print_warning_message "$message"
