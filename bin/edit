@@ -1,0 +1,98 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+requirements=("tasker")
+file=""
+
+# Function to display help message
+function print_usage {
+    print
+    print "Usage: $script_name [options] <file>"
+    print
+    print "Edit a file with external editor."
+    print
+    print "Arguments:"
+    print "  <file>"
+    print
+    print "Options:"
+    print "  -h, --help      Display this help message."
+    print
+}
+
+# Function to print error message
+function error {
+    local errmsg="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%F{$color}%BError%f%b: $errmsg" >&2
+}
+
+# Function to check for required packages
+function pkg_check {
+    local missing_pkgs=()
+    for pkg in "${requirements[@]}"; do
+        if ! command -v "$pkg" &> /dev/null; then
+            missing_pkgs+=("$pkg")
+        fi
+    done
+    if [[ "${#missing_pkgs[@]}" -gt 0 ]]; then
+        error "Missing packages: ${missing_pkgs[@]}"
+        return 1
+    fi
+}
+
+# Ensure required packages are accessible
+if [[ "${#requirements[@]}" -gt 0 ]]; then
+    pkg_check || exit 1
+fi
+
+# Get some help
+if [[ "$#" -eq 0 ]]; then
+    error "Missing value for file"
+    print_usage
+    exit 1
+fi
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -h|--help|--help-all|-help|help)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            file="$1"
+            break
+            ;;
+    esac
+    shift
+done
+
+# Ensure 'file' is defined
+if [[ -z "$file" ]]; then
+    error "Undefined variable: file"
+    exit 1
+fi
+
+# Ensure 'file' exists
+if [[ ! -f "$file" ]]; then
+    error "Missing file: $file"
+    exit 1
+fi
+
+# Ensure 'file' is readable
+if [[ ! -r "$file" ]]; then
+    error "Cannot edit file '$file': Permission denied"
+    exit 1
+fi
+
+# Ensure 'file' is full path
+if [[ ! "$file" == /* ]]; then
+    file="$PWD/$file"
+fi
+
+# Edit file
+tasker -t edit "$file" || error
