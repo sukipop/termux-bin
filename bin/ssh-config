@@ -1,0 +1,59 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+
+# Function to display help message
+function print_usage {
+    print
+    print "Usage: $script_name [options]"
+    print
+    print "Options:"
+    print "  -h, --help       Show this help message."
+    print
+}
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -h|--help|--help-all|-help|help)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            error "Unknown argument: $1"
+            print_usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Ensure ssh dir exists
+mkdir -p "${HOME}/.ssh"
+
+# Ensure ssh config files exist
+touch "${HOME}/.ssh/config"
+touch "${HOME}/.ssh/authorized_keys"
+
+# Set ssh dir permissions
+chmod 0700 "${HOME}/.ssh"
+chmod 0600 "${HOME}/.ssh/config"
+chmod 0600 "${HOME}/.ssh/authorized_keys"
+
+# Edit ssh config
+if [[ -n "${EDITOR}" ]]; then
+    "${EDITOR}" "${HOME}/.ssh/config"
+else
+    nano "${HOME}/.ssh/config"
+fi
