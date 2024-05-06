@@ -46,11 +46,22 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # Parse arguments
+option=""
+argument=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
-        --help|--help-all|-h|-help|h|help)
+        -h|--help|--help-all|-help|help)
             print_usage
             exit 0
+            ;;
+        -o|--option)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                error "Missing value for $1"
+                print_usage
+                exit 1
+            fi
+            option="$2"
+            shift
             ;;
         -*)
             error "Unknown option: $1"
@@ -58,9 +69,12 @@ while [[ "$#" -gt 0 ]]; do
             exit 1
             ;;
         *)
-            error "Unknown argument: $1"
-            print_usage
-            exit 1
+            if [[ -n "$argument" ]]; then
+                error "Unknown argument: $1"
+                print_usage
+                exit 1
+            fi
+            argument="$1"
             ;;
     esac
     shift
