@@ -1,15 +1,22 @@
 #!/usr/bin/env zsh
 script_name="$(basename $0)"
 requirements=()
+argument=""
+option=""
 
 # Function to display help message
 function print_usage {
     print "Usage: $script_name [options]"
     print
-    print "Sandbox."
+    print "Zsh script template."
+    print
+    print "Arguments:"
+    print "  <argument>      Some argument."
     print
     print "Options:"
     print "  -h, --help      Display this help message."
+    print "  -o, --option <value>"
+    print "                  Some option."
     print
 }
 
@@ -46,8 +53,6 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # Parse arguments
-option=""
-argument=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         -h|--help|--help-all|-help|help)
