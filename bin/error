@@ -4,12 +4,14 @@ message="Unknown error"
 
 # Function to display help message
 function print_usage {
+    print
     print "Usage: $script_name [options] <message>"
     print
     print "Print a stylized error message."
     print
     print "Options:"
-    print "  -h, --help       Show this help message and exit"
+    print "  -h, --help       Show this help message."
+    print
 }
 
 # Function to print error message
