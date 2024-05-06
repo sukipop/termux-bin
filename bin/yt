@@ -1,0 +1,134 @@
+#!/usr/bin/env zsh
+script_name="${0##*/}"
+requirements=("yt-dlp")
+
+# Function to display help message
+function print_usage {
+    print
+    print "Usage: $script_name [options] <link>"
+    print
+    print "Suki's yt-dlp handler."
+    print
+    print "Arguments:"
+    print "  <link>          Video url."
+    print
+    print "Options:"
+    print "  -h, --help      Display this help message."
+    print
+}
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Function to check for required packages
+function pkg_check {
+    local missing_pkgs=()
+    for pkg in "${requirements[@]}"; do
+        if ! command -v "$pkg" &> /dev/null; then
+            missing_pkgs+=("$pkg")
+        fi
+    done
+    if [[ "${#missing_pkgs[@]}" -gt 0 ]]; then
+        error "Missing packages: ${missing_pkgs[*]}"
+        return 1
+    fi
+}
+
+pick_dl_dir() {
+    local device_storage="/storage/emulated/0"
+    local download_dir="$PWD"
+
+    # If not in home dir, use working dir
+    if [[ "$download_dir" != "$HOME" ]]; then
+        print "$download_dir"
+        return 0
+    fi
+
+    # Check if device storage is accessible
+    if [[ -d "$device_storage" ]]; then
+        download_dir="$device_storage/Download/yt-dlp"
+    else
+        download_dir="$HOME/downloads"
+    fi
+
+    # Ensure 'download_dir' exists
+    if ! mkdir -p "$download_dir"; then
+        error "Failed to create download directory: $download_dir"
+        return 1
+    fi
+
+    print "$download_dir"
+}
+
+clean_title() {
+    local title=$(yt-dlp --get-title "$link")
+
+    # Replace spaces with underscores
+    title="${title// /_}"
+    # Replace '_-_' with '-'
+    title="${title/_-_/-/}"
+    # Replace '__' with '_'
+    title="${title/__/_/}"
+    # Remove emojis
+    title=$(print "$title" | sed 's/[^[:alnum:]\-_().]//g')
+    # Ensure title is no more than 120 characters
+    title="${title:0:120}"
+
+    print "$title"
+}
+
+# Define defaults
+download_dir=$(pick_dl_dir)
+link=""
+
+# Ensure required packages are accessible
+if [[ "${#requirements[@]}" -gt 0 ]]; then
+    pkg_check || exit 1
+fi
+
+# Get some help
+if [[ "$#" -eq 0 ]]; then
+    error "Missing value for URL"
+    print_usage
+    exit 1
+fi
+
+# Parse arguments
+while (( "$#" )); do
+    case "$1" in
+        -h|--help|--help-all|-help|help)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            if [[ -n "$link" ]]; then
+                error "Unknown argument: $1"
+                print_usage
+                exit 1
+            fi
+            link="$1"
+            ;;
+    esac
+    shift
+done
+
+# Ensure URL is provided
+if [[ -z "$link" ]]; then
+    error "URL is required"
+fi
+
+# Define 'output'
+title=$(clean_title)
+output="$download_dir/$title"
+
+# Download video using yt-dlp
+yt-dlp -o "$output.%(ext)s" "$link"
