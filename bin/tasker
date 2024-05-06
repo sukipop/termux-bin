@@ -73,14 +73,7 @@ if [[ ! -d "$trigger_dir" ]]; then
 fi
 
 # Parse arguments
-clear
-int=
 while [[ "$#" -gt 0 ]]; do
-    ((int++))
-    debug "Arg $int: $1"
-    echo "content: $content"
-    echo "trigger: $trigger"
-    echo
     case "$1" in
         -h|--help|--help-all|-help|help)
             print_usage
@@ -126,10 +119,6 @@ done
 if [[ -z "$content" ]]; then
     content=$(date -u +%s)
 fi
-
-debug "Triggered!"
-echo "content: $content"
-echo "trigger: $trigger"
 
 # Trigger tasker
 print -n "$content" > "$trigger"
