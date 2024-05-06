@@ -1,0 +1,120 @@
+#!/usr/bin/env zsh
+script_name="$(basename $0)"
+trigger_dir="/storage/emulated/0/Tasker/triggers"
+trigger="$trigger_dir/trigger"
+content=""
+
+# Function to display help message
+function print_usage {
+    print "Usage: $script_name [options] <content>"
+    print
+    print "Trigger tasker."
+    print
+    print "Arguments:"
+    print "  <content>       String to pass to tasker"
+    print
+    print "Options:"
+    print "  -h, --help      Display this help message."
+    print "  -t, --trigger <name>"
+    print "                  Define trigger file."
+    print "  -f, --file <file>"
+    print "                  Source content from file."
+    print
+}
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Function to source content from file
+function source_file {
+    local file="$1"
+
+    # Ensure 'file' exists
+    if [[ ! -f "$file" ]]; then
+        error "Missing file: $file"
+        return 1
+    fi
+
+    # Ensure 'file' is readable
+    if [[ ! -r "$file" ]]; then
+        error "cannot read file '$file': Permission denied"
+        return 1
+    fi
+
+    # Read 'file' contents
+    if ! cat "$file"; then
+        error "Failed to read file: $file"
+        return 1
+    fi
+}
+
+# Ensure device storage is accessible
+if [[ ! -d "/storage/emulated/0/" ]]; then
+    error "Device storage is inaccessible"
+    print "Execute %Btermux-setup-storage%b"
+    print
+    exit 1
+fi
+
+# Ensure 'trigger_dir' exists
+if [[ ! -d "$trigger_dir" ]]; then
+    error "Missing directory: $trigger_dir"
+    print "To setup trigger_dir:"
+    print "  1. mkdir -p $trigger_dir"
+    print "  2. Reconfigure Tasker profile: File Trigger"
+    print
+    exit 1
+fi
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -h|--help|--help-all|-help|help)
+            print_usage
+            exit 0
+            ;;
+        -t|--trigger)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                error "Missing value for $1"
+                print_usage
+                exit 1
+            fi
+            trigger="$trigger_dir/$2"
+            ;;
+        -f|--file)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                error "Missing value for $1"
+                print_usage
+                exit 1
+            fi
+            source_file "$2" || exit 1
+            shift
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            if [[ -n "$content" ]]; then
+                error "Unknown argument: $1"
+                print_usage
+                exit 1
+            fi
+            content="$1"
+            ;;
+    esac
+    shift
+done
+
+# Fallback to default 'content'
+if [[ -z "$content" ]]; then
+    content=$(date -u +%s)
+fi
+
+# Trigger tasker
+print -n "$content" > "$trigger"
