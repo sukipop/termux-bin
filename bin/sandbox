@@ -1,11 +1,12 @@
 #!/usr/bin/env zsh
-script_name="$(basename $0)"
+script_name="${0##*/}"
 requirements=()
 argument=""
 option=""
 
 # Function to display help message
 function print_usage {
+    print
     print "Usage: $script_name [options]"
     print
     print "Zsh script template."
@@ -53,7 +54,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # Parse arguments
-while [[ "$#" -gt 0 ]]; do
+while (( "$#" )); do
     case "$1" in
         -h|--help|--help-all|-help|help)
             print_usage
