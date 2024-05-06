@@ -21,13 +21,13 @@ function error {
 
 # Function to print stylized debug message
 function print_debug_message {
-    local message="${1:-foo bar}"
     local color="${COLOR_BLUE:-#64b5f6}"
-    print -P "%B%F{$color}$header%f:%b $message" 1>&2
+    print -P "%B%F{$color}$header%f:%b $1" 1>&2
 }
 
 # Parse arguments
 header="Debug"
+message="foo bar"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --help|--help-all|-h|-help|h|help)
