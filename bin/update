@@ -1,0 +1,46 @@
+#!/usr/bin/env zsh
+script_name="${0##*/}"
+
+# Function to display help message
+function print_usage {
+    print
+    print "Usage: $script_name [options]"
+    print
+    print "Script to update packages."
+    print
+    print "Options:"
+    print "  -h, --help    Print this message."
+    print
+}
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -h|--help|--help-all|-help|help)
+            print_usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            error "Unknown argument: $1"
+            print_usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Update packages
+pkg update -y || exit 1
+pkg upgrade -y || exit 1
