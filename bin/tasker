@@ -6,6 +6,7 @@ content=""
 
 # Function to display help message
 function print_usage {
+    print
     print "Usage: $script_name [options] <content>"
     print
     print "Trigger tasker."
@@ -32,7 +33,8 @@ function error {
 # Function to source content from file
 function source_file {
     local file="$1"
-
+    debug "$0: $file"
+    exit 0
     # Ensure 'file' exists
     if [[ ! -f "$file" ]]; then
         error "Missing file: $file"
@@ -71,7 +73,14 @@ if [[ ! -d "$trigger_dir" ]]; then
 fi
 
 # Parse arguments
+clear
+int=
 while [[ "$#" -gt 0 ]]; do
+    ((int++))
+    debug "Arg $int: $1"
+    echo "content: $content"
+    echo "trigger: $trigger"
+    echo
     case "$1" in
         -h|--help|--help-all|-help|help)
             print_usage
@@ -84,6 +93,7 @@ while [[ "$#" -gt 0 ]]; do
                 exit 1
             fi
             trigger="$trigger_dir/$2"
+            shift
             ;;
         -f|--file)
             if [[ -z "$2" || "$2" == -* ]]; then
@@ -101,6 +111,7 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         *)
             if [[ -n "$content" ]]; then
+                debug "Parse arguments: $1: content is already defined: $content"
                 error "Unknown argument: $1"
                 print_usage
                 exit 1
@@ -115,6 +126,10 @@ done
 if [[ -z "$content" ]]; then
     content=$(date -u +%s)
 fi
+
+debug "Triggered!"
+echo "content: $content"
+echo "trigger: $trigger"
 
 # Trigger tasker
 print -n "$content" > "$trigger"
