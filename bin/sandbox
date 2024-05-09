@@ -1,13 +1,11 @@
 #!/usr/bin/env zsh
-script_name="${0##*/}"
-requirements=()
 argument=""
 option=""
 
 # Function to display help message
 function print_usage {
     print
-    print "Usage: $script_name [options]"
+    print "Usage: ${0##*/} [options]"
     print
     print "Zsh script template."
     print
@@ -30,22 +28,25 @@ function error {
 
 # Function to check for required packages
 function pkg_check {
+    local requirements=()
     local missing_pkgs=()
+
+    # Check for missing packages
     for pkg in "${requirements[@]}"; do
         if ! command -v "$pkg" &> /dev/null; then
             missing_pkgs+=("$pkg")
         fi
     done
+
+    # Display error if missing packages
     if [[ "${#missing_pkgs[@]}" -gt 0 ]]; then
-        error "Missing packages: ${missing_pkgs[@]}"
+        error "Missing packages: ${missing_pkgs[*]}"
         return 1
     fi
 }
 
 # Ensure required packages are accessible
-if [[ "${#requirements[@]}" -gt 0 ]]; then
-    pkg_check || exit 1
-fi
+pkg_check || exit 1
 
 # Get some help
 if [[ "$#" -eq 0 ]]; then
@@ -54,34 +55,44 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # Parse arguments
-while (( "$#" )); do
-    case "$1" in
-        -h|--help|--help-all|-help|help)
-            print_usage
-            exit 0
-            ;;
-        -o|--option)
-            if [[ -z "$2" || "$2" == -* ]]; then
-                error "Missing value for $1"
-                print_usage
-                exit 1
-            fi
-            option="$2"
-            shift
-            ;;
-        -*)
-            error "Unknown option: $1"
+while (( "$#" )); do case "$1" in
+    # Get some help
+    -h|--help|--help-all|-help|help)
+        print_usage
+        exit 0
+        ;;
+
+    # Define 'option'
+    -o|--option)
+        if [[ -z "$2" || "$2" == -* ]]; then
+            error "Missing value for $1"
             print_usage
             exit 1
-            ;;
-        *)
-            if [[ -n "$argument" ]]; then
-                error "Unknown argument: $1"
-                print_usage
-                exit 1
-            fi
-            argument="$1"
-            ;;
+        fi
+        option="$2"
+        shift
+        ;;
+
+    # Handel unknown options
+    -*)
+        error "Unknown option: $1"
+        print_usage
+        exit 1
+        ;;
+
+    # Define argument
+    *)
+        if [[ -n "$argument" ]]; then
+            error "Unknown argument: $1"
+            print_usage
+            exit 1
+        fi
+        argument="$1"
+        ;;
     esac
     shift
 done
+
+# Terminate script
+print "Done!"
+exit 0

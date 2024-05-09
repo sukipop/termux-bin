@@ -1,11 +1,9 @@
 #!/usr/bin/env zsh
-script_name="${0##*/}"
-requirements=("yt-dlp")
 
 # Function to display help message
 function print_usage {
     print
-    print "Usage: $script_name [options] <link>"
+    print "Usage: ${0##*/} [options] <link>"
     print
     print "Suki's yt-dlp handler."
     print
@@ -19,19 +17,24 @@ function print_usage {
 
 # Function to print error message
 function error {
-    local message="${1:-Unknown error}"
+    local msg="${1:-Unknown error}"
     local color="${COLOR_RED:-#ff0000}"
-    print -P "%B%F{$color}Error%f:%b $message" >&2
+    print -P "%B%F{$color}Error%f:%b $msg" >&2
 }
 
 # Function to check for required packages
 function pkg_check {
+    local requirements=("yt-dlp")
     local missing_pkgs=()
+
+    # Check for missing packages
     for pkg in "${requirements[@]}"; do
         if ! command -v "$pkg" &> /dev/null; then
             missing_pkgs+=("$pkg")
         fi
     done
+
+    # Display error if missing packages
     if [[ "${#missing_pkgs[@]}" -gt 0 ]]; then
         error "Missing packages: ${missing_pkgs[*]}"
         return 1
