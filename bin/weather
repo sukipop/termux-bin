@@ -1,11 +1,21 @@
 #!/usr/bin/env zsh
-units="metric"
+script_name="${0##*/}"
 
-# Define Termux variavles
-set -e
-: "${TERMUX_APP_PACKAGE:="com.termux"}"
-: "${TERMUX_PREFIX:="/data/data/${TERMUX_APP_PACKAGE}/files/usr"}"
-: "${TERMUX_ANDROID_HOME:="/data/data/${TERMUX_APP_PACKAGE}/files/home"}"
+# Default settings
+units="metric"
+location="current"
+
+# Function to display help message
+function print_usage {
+    cat <<- EOF
+
+Usage: ${script_name} [options]
+
+Options:
+  -h, --help      Display this help message.
+
+EOF
+}
 
 # Function to print error message
 function error {
@@ -14,37 +24,150 @@ function error {
     print -P "%B%F{$color}Error%f:%b $message" >&2
 }
 
-# Get openweathermap token
-token_file="${TERMUX_ANDROID_HOME}/.config/weather/token"
-if [[ ! -f "$token_file" ]]; then
-    error "Token file not found"
-    exit 1
-elif ! source "$token_file"; then
-    error "Failed to get token"
-    exit 1
-elif [[ -z "$token" ]]; then
-    error "Undefined variable: token"
-    exit 1
-fi
+# Function to check for required packages
+function pkg_check {
+    local requirements=()
+    local missing_pkgs=()
 
-# Get location
-location=$(termux-location -r last)
-if [[ -z "$location" ]]; then
+    # Check for missing packages
+    for pkg in "${requirements[@]}"; do
+        if ! command -v "$pkg" &>/dev/null; then
+            missing_pkgs+=("$pkg")
+        fi
+    done
+
+    # Display error if missing packages
+    if [[ "${#missing_pkgs[@]}" -gt 0 ]]; then
+        error "Missing packages: ${missing_pkgs[*]}"
+        return 1
+    fi
+}
+
+# Function to parse arguments
+function parse_arguments {
+    while (( "$#" )); do case "$1" in
+        -h|--help|--help-all|-help|help)
+            print_usage
+            exit 0
+            ;;
+        -m|--metric)
+            units="metric"
+            ;;
+        -f|--fahrenheit)
+            units="fahrenheit"
+            ;;
+        -*)
+            error "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+        *)
+            error "Unknown argument: $1"
+            print_usage
+            exit 1
+            ;;
+        esac
+        shift
+    done
+}
+
+# Function to get openweathermap token
+function get_token {
+    local token_file="${HOME}/.config/weather/token"
+    local token
+
+    # Use 'OWM_TOKEN' if set
+    if [[ -n "$OWM_TOKEN" ]]; then
+        print "$OWM_TOKEN"
+    # Use 'token_file' if found
+    elif [[ -f "$token_file" ]] && source "$token_file"; then
+        if [[ -n "$token" ]]; then
+            print "$token"
+        fi
+    fi
+}
+
+# Function to get new owm token
+function get_new_key {
+    local config_dir="${HOME}/.config/weather"
+    local token_file="${config_dir}/token"
+    local token
+
+    # Ensure 'config_dir' exists
+    mkdir -p "$config_dir"
+
+    # Ask user for owm token
+    print "Please enter your OpenWeatherMap API key:"
+    if read token && [[ -n "$token" ]]; then
+        print "token=${token}" >> "$token_file"
+        return 0
+    fi
+
+    error "Invalid input or no input received."
+    exit 1
+}
+
+# Function to get location
+function get_location {
+    local loc_data
+    if [[ "$location" == "current" ]]; then
+        loc_data=$(termux-location -r last)
+        if [[ "$?" -eq 0 && -n "$loc_data" ]]; then
+            # Extract latitude and longitude
+            lat=$(jq -r '.latitude' <<< "$loc_data")
+            lon=$(jq -r '.longitude' <<< "$loc_data")
+            if [[ -n "$lat" && -n "$lon" ]]; then
+                return 0
+            fi
+        fi
+    else
+        error "City names not yet supported"
+        return 1
+    fi
+
     error "Failed to determine location"
-    exit 1
-fi
+    return 1
+}
 
-# Extract latitude and longitude
-lat=$(jq -r '.latitude' <<< "$location")
-lon=$(jq -r '.longitude' <<< "$location")
+# Function to request weather data
+function request_data {
+    local data url
+    url="https://api.openweathermap.org/data/3.0/onecall"
+    url="${url}?lat=${lat}&lon=${lon}&appid=${token}"
+    url="${url}&units=${units:-metric}"
 
-# Request weather data
-url="https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&appid=${token}&units=${units}"
-data=$(curl -s -f "$url")
-if [[ "$?" -ne 0 || -z "$data" ]]; then
-    error "Failed to retrieve weather data"
-    exit 1
-fi
+    # Send request
+    data=$(curl -s -f "$url")
+    if [[ "$?" -ne 0 || -z "$data" ]]; then
+        error "Failed to retrieve weather data"
+        exit 1
+    fi
 
-# Print weather data
-jq -c '.' <<< "$data"
+    # Print weather data
+    jq -c '.' <<< "$data"
+}
+
+function main {
+    local token
+
+    parse_arguments "$@"
+
+    # Define 'token'
+    token=$(get_token)
+    if [[ -z "$token" ]]; then
+        get_new_key
+        token=$(get_token)
+        if [[ -z "$token" ]]; then
+            error "Failed to get OWM token"
+            exit 1
+        fi
+    fi
+
+    get_location || exit 1
+    debug -H token "'${token:-undefined}'"
+    debug -H lat "'${lat:-undefined}'"
+    debug -H lon "'${lon:-undefined}'"
+    #request_data || exit 1
+}
+
+main "$@"
