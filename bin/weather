@@ -1,9 +1,14 @@
 #!/usr/bin/env zsh
 script_name="${0##*/}"
+cache_dir="${HOME}/.cache"
+cache_file="${cache_dir}/weather.json"
+config_dir="${HOME}/.config/weather"
 
 # Default settings
 units="metric"
 location="current"
+force_update=0
+max_data_age=300
 
 # Function to display help message
 function print_usage {
@@ -26,7 +31,7 @@ function error {
 
 # Function to check for required packages
 function pkg_check {
-    local requirements=()
+    local requirements=("jq" "bc")
     local missing_pkgs=()
 
     # Check for missing packages
@@ -56,6 +61,9 @@ function parse_arguments {
         -f|--fahrenheit)
             units="fahrenheit"
             ;;
+        --force)
+            force_update=1
+            ;;
         -*)
             error "Unknown option: $1"
             print_usage
@@ -73,28 +81,18 @@ function parse_arguments {
 
 # Function to get openweathermap token
 function get_token {
-    local token_file="${HOME}/.config/weather/token"
-    local token
+    local token_file="${config_dir}/token"
 
     # Use 'OWM_TOKEN' if set
     if [[ -n "$OWM_TOKEN" ]]; then
-        print "$OWM_TOKEN"
+        token="$OWM_TOKEN"
+        return 0
     # Use 'token_file' if found
     elif [[ -f "$token_file" ]] && source "$token_file"; then
         if [[ -n "$token" ]]; then
-            print "$token"
+            return 0
         fi
     fi
-}
-
-# Function to get new owm token
-function get_new_key {
-    local config_dir="${HOME}/.config/weather"
-    local token_file="${config_dir}/token"
-    local token
-
-    # Ensure 'config_dir' exists
-    mkdir -p "$config_dir"
 
     # Ask user for owm token
     print "Please enter your OpenWeatherMap API key:"
@@ -116,6 +114,9 @@ function get_location {
             # Extract latitude and longitude
             lat=$(jq -r '.latitude' <<< "$loc_data")
             lon=$(jq -r '.longitude' <<< "$loc_data")
+            # Shorten to 4 decimals
+            lat=$(printf "%.4f" "$lat")
+            lon=$(printf "%.4f" "$lon")
             if [[ -n "$lat" && -n "$lon" ]]; then
                 return 0
             fi
@@ -129,22 +130,47 @@ function get_location {
     return 1
 }
 
-# Function to request weather data
-function request_data {
-    local data url
-    url="https://api.openweathermap.org/data/3.0/onecall"
+# Function to read weather data from cache
+function read_cache {
+    local date_age dt
+
+    # Ensure 'cache_file' exists
+    if [[ ! -f "$cache_file" ]]; then
+        return 1
+    fi
+
+    weather_data=$(cat "$cache_file")
+
+    # Check data age
+    dt=$(jq -c '.current.dt' <<< "$weather_data")
+    data_age=$(($(date -u +%s)-$dt))
+    if [[ "$data_age" -gt "$max_data_age" ]]; then
+        return 2
+    fi
+
+    # Check data location
+    data_lat=$(jq -c '.lat' <<< "$weather_data")
+    data_lon=$(jq -c '.lon' <<< "$weather_data")
+
+    # Simple threshold check for latitude and longitude
+    if [[ $(bc <<< "$lat - $data_lat > 0.01 || $lon - $data_lon > 0.01") -eq 1 ]]; then
+        return 3
+    fi
+}
+
+
+# Function to update weather data
+function update_weather_data {
+    local url="https://api.openweathermap.org/data/3.0/onecall"
     url="${url}?lat=${lat}&lon=${lon}&appid=${token}"
     url="${url}&units=${units:-metric}"
 
     # Send request
-    data=$(curl -s -f "$url")
-    if [[ "$?" -ne 0 || -z "$data" ]]; then
+    curl -s -f "$url" -o "$cache_file"
+    if [[ "$?" -ne 0 ]]; then
         error "Failed to retrieve weather data"
-        exit 1
+        return 1
     fi
-
-    # Print weather data
-    jq -c '.' <<< "$data"
 }
 
 function main {
@@ -152,22 +178,24 @@ function main {
 
     parse_arguments "$@"
 
+    # Ensure dirs exists
+    mkdir -p "$cache_dir" "$config_dir"
+
     # Define 'token'
-    token=$(get_token)
+    get_token
     if [[ -z "$token" ]]; then
-        get_new_key
-        token=$(get_token)
-        if [[ -z "$token" ]]; then
-            error "Failed to get OWM token"
-            exit 1
-        fi
+        exit 1
     fi
 
     get_location || exit 1
-    debug -H token "'${token:-undefined}'"
-    debug -H lat "'${lat:-undefined}'"
-    debug -H lon "'${lon:-undefined}'"
-    #request_data || exit 1
+
+    read_cache
+
+    if [[ "$?" -ne 0 || "$force_update" -ne 0 ]]; then
+        update_weather_data || exit 1
+    fi
+
+    jq '.' <<< "$weather_data"
 }
 
 main "$@"
