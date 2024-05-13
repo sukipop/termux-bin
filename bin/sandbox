@@ -1,13 +1,26 @@
 #!/usr/bin/env zsh
-argument=""
-option=""
+
+# Define Termux variavles
+set -e
+: "${TERMUX_APP_PACKAGE:="com.termux"}"
+: "${TERMUX_PREFIX:="/data/data/${TERMUX_APP_PACKAGE}/files/usr"}"
+: "${TERMUX_ANDROID_HOME:="/data/data/${TERMUX_APP_PACKAGE}/files/home"}"
+
+# Define script variables
+script_name="${0##*/}"
+verbose=0
+special_argument=""
+eg_flag=""
 
 # Function to display help message
 function print_usage {
     print
-    print "Usage: ${0##*/} [options]"
+    print "Usage: ${script_name} [options]"
     print
-    print "Zsh script template."
+    print "My eventual zsh template for termux."
+    print
+    print "Template is zsh focused, so it should prioritize zsh syntax,"
+    print "commands, and best practices over compatibility with other shells."
     print
     print "Arguments:"
     print "  <argument>      Some argument."
@@ -50,6 +63,7 @@ pkg_check || exit 1
 
 # Get some help
 if [[ "$#" -eq 0 ]]; then
+    error "Missing Value for argument"
     print_usage
     exit 1
 fi
@@ -62,14 +76,14 @@ while (( "$#" )); do case "$1" in
         exit 0
         ;;
 
-    # Define 'option'
+    # Define 'eg_flag'
     -o|--option)
         if [[ -z "$2" || "$2" == -* ]]; then
             error "Missing value for $1"
             print_usage
             exit 1
         fi
-        option="$2"
+        eg_flag="$2"
         shift
         ;;
 
@@ -80,19 +94,30 @@ while (( "$#" )); do case "$1" in
         exit 1
         ;;
 
-    # Define argument
+    # Define 'special_argument'
     *)
-        if [[ -n "$argument" ]]; then
+        if [[ -n "$special_argument" ]]; then
             error "Unknown argument: $1"
             print_usage
             exit 1
         fi
-        argument="$1"
+        special_argument="$1"
         ;;
     esac
     shift
 done
 
-# Terminate script
-print "Done!"
-exit 0
+() {
+    (( "$verbose" )) && print -P "%BStarting ${0##*/}...%b"
+
+    # Script logic here
+    print -P "%B${script_name} variables%b:"
+    print -P "%B%F{4}special_argument%f:%b ${special_argument:-undefined}"
+    print -P "%B%F{4}eg_flag%f:%b ${eg_flag:-undefined}"
+
+    # Terminate script
+    print "\nDone!"
+    return 0
+}
+
+exit "$?"

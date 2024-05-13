@@ -1,0 +1,50 @@
+#!/usr/bin/env zsh
+units="metric"
+
+# Define Termux variavles
+set -e
+: "${TERMUX_APP_PACKAGE:="com.termux"}"
+: "${TERMUX_PREFIX:="/data/data/${TERMUX_APP_PACKAGE}/files/usr"}"
+: "${TERMUX_ANDROID_HOME:="/data/data/${TERMUX_APP_PACKAGE}/files/home"}"
+
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
+}
+
+# Get openweathermap token
+token_file="${TERMUX_ANDROID_HOME}/.config/weather/token"
+if [[ ! -f "$token_file" ]]; then
+    error "Token file not found"
+    exit 1
+elif ! source "$token_file"; then
+    error "Failed to get token"
+    exit 1
+elif [[ -z "$token" ]]; then
+    error "Undefined variable: token"
+    exit 1
+fi
+
+# Get location
+location=$(termux-location -r last)
+if [[ -z "$location" ]]; then
+    error "Failed to determine location"
+    exit 1
+fi
+
+# Extract latitude and longitude
+lat=$(jq -r '.latitude' <<< "$location")
+lon=$(jq -r '.longitude' <<< "$location")
+
+# Request weather data
+url="https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&appid=${token}&units=${units}"
+data=$(curl -s -f "$url")
+if [[ "$?" -ne 0 || -z "$data" ]]; then
+    error "Failed to retrieve weather data"
+    exit 1
+fi
+
+# Print weather data
+jq -c '.' <<< "$data"
