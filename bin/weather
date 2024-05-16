@@ -195,7 +195,7 @@ function main {
         update_weather_data || exit 1
     fi
 
-    jq '.' <<< "$weather_data"
+    print "$weather_data"
 }
 
 main "$@"
