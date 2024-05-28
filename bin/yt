@@ -1,9 +1,11 @@
 #!/usr/bin/env zsh
+script_name="${0##*/}"
+target_url=""
 
 # Function to display help message
 function print_usage {
     print
-    print "Usage: ${0##*/} [options] <link>"
+    print "Usage: ${script_name} [options] <link>"
     print
     print "Suki's yt-dlp handler."
     print
@@ -41,6 +43,7 @@ function pkg_check {
     fi
 }
 
+# Function to determine download destination
 pick_dl_dir() {
     local device_storage="/storage/emulated/0"
     local download_dir="$PWD"
@@ -67,8 +70,22 @@ pick_dl_dir() {
     print "$download_dir"
 }
 
+# Function to
+function url_substitutions {
+    local url="$1"
+
+    # Replace "x.com" with "twitter.com"
+    if [[ "$url" == *"x.com"* ]]; then
+        url="${url/x.com/twitter.com}"
+    fi
+
+    # No substitutions made
+    print "$url"
+}
+
+# Function to 
 clean_title() {
-    local title=$(yt-dlp --get-title "$link")
+    local title=$(yt-dlp --get-title "$target_url")
 
     # Replace spaces with underscores
     title="${title// /_}"
@@ -83,10 +100,6 @@ clean_title() {
 
     print "$title"
 }
-
-# Define defaults
-download_dir=$(pick_dl_dir)
-link=""
 
 # Ensure required packages are accessible
 if [[ "${#requirements[@]}" -gt 0 ]]; then
@@ -107,26 +120,42 @@ while (( "$#" )); do
             print_usage
             exit 0
             ;;
+        -P|--path)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                error "Missing argument for $1"
+                print_usage
+                exit 1
+            fi
+            download_dir="$2"
+            shift
+            ;;
         -*)
             error "Unknown option: $1"
             print_usage
             exit 1
             ;;
         *)
-            if [[ -n "$link" ]]; then
+            if [[ -n "$target_url" ]]; then
                 error "Unknown argument: $1"
                 print_usage
                 exit 1
             fi
-            link="$1"
+            target_url="$1"
             ;;
     esac
     shift
 done
 
-# Ensure URL is provided
-if [[ -z "$link" ]]; then
-    error "URL is required"
+# Define 'download_dir' if needed
+if [[ -z "$download_dir" ]]; then
+    download_dir=$(pick_dl_dir)
+fi
+
+# Perform URL substitutions
+if [[ -n "$target_url" ]]; then
+    target_url=$(url_substitutions "$target_url") || exit 1
+else
+    error "Undefined variable: target_url"
 fi
 
 # Define 'output'
@@ -134,4 +163,4 @@ title=$(clean_title)
 output="$download_dir/$title"
 
 # Download video using yt-dlp
-yt-dlp -o "$output.%(ext)s" "$link"
+yt-dlp -o "$output.%(ext)s" "$target_url"

@@ -87,14 +87,14 @@ function parse_arguments {
     done
 }
 
-# Main script execution
-() {
-    pkg_check || exit 1
+# Main script logic
+function main {
+    pkg_check || return 1
 
     if [[ "$#" -eq 0 ]]; then
         error "Missing value for argument"
         print_usage
-        exit 1
+        return 1
     fi
 
     (( "$verbose" )) && print -P "%BStarting ${script_name}...%b"
@@ -106,3 +106,6 @@ function parse_arguments {
 
     print "\nDone!"
 }
+
+main "$@"
+exit "$?"
