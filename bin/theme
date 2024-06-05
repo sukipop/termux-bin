@@ -1,31 +1,33 @@
-#!/usr/bin/env bash
-script_name="$(basename $0)"
-assets="$PREFIX/share/termux-styles/themes"
+#!/usr/bin/env zsh
+script_name="${0##*/}"
+assets="${PREFIX}/share/termux-styles/themes"
 
 # Function to display help message
-print_usage() {
-    echo "Usage: ${script_name} [arguments] [options]"
-    echo ""
-    echo "Script to manage termux themes."
-    echo ""
-    echo "Arguments:"
-    echo "  apply [theme]     Apply theme."
-    echo "  dark              Enable dark theme."
-    echo "  light             Enable light theme."
-    echo ""
-    echo "Options:"
-    echo "  -h|--help         Print this message."
-    echo ""
+function print_usage {
+    print
+    print "Usage: ${script_name} [arguments] [options]"
+    print
+    print "Script to manage termux themes."
+    print
+    print "Arguments:"
+    print "  apply [theme]     Apply theme."
+    print "  dark              Enable dark theme."
+    print "  light             Enable light theme."
+    print
+    print "Options:"
+    print "  -h|--help         Print this message."
+    print
 }
 
-# Function to print error and help messages
-error() {
-    local errmsg="${1:-Unknown error}"
-    echo -e "\033[1;31mError\033[0m: ${errmsg}\n" 1>&2
-    print_usage
+# Function to print error message
+function error {
+    local message="${1:-Unknown error}"
+    local color="${COLOR_RED:-#ff0000}"
+    print -P "%B%F{$color}Error%f:%b $message" >&2
 }
 
-apply_theme() {
+# Function to apply a theme
+function apply_theme {
     local theme="$1"
     local destination="$HOME/.termux/colors.properties"
 
@@ -40,78 +42,83 @@ apply_theme() {
     termux-reload-settings
 }
 
-select_theme() {
+# Function to select a theme using fzf
+function select_theme {
     local selection
 
-    # 
-    selection=$(ls "$assets"/*.properties | xargs -n1 basename --suffix=".properties" | fzf)
-    if [[ "$?" -gt 0 || -z "$selection" ]]; then
+    # List available themes and select one
+    selection=$(ls "${assets}"/*.properties | xargs -n1 basename --suffix=".properties" | fzf)
+    if [[ $? -gt 0 || -z "$selection" ]]; then
         error "Failed to select a theme"
         return 1
     fi
 
     # Ensure selection exists
-    selection="$assets/$selection.properties"
+    selection="${assets}/${selection}.properties"
     if [[ ! -f "$selection" ]]; then 
         error "Missing file: $selection"
         return 1
     fi
 
     # Return 'selection'
-    echo "$selection"
+    print "$selection"
 }
 
-# Ensure 'assets' exists
-if [[ ! -d "$assets" ]]; then
-    error "Missing directory: $assets"
-    exit 1
-fi
+# Main function
+function main {
+    # Ensure 'assets' directory exists
+    if [[ ! -d "$assets" ]]; then
+        error "Missing directory: $assets"
+        return 1
+    fi
 
-# Ensure 'assets' contains at least one .properties file
-if [[ ! $(find "$assets" -maxdepth 1 -type f -name '*.properties') ]]; then
-    error "No properties files found: $assets"
-    exit 1
-fi
+    # Ensure 'assets' contains at least one .properties file
+    if [[ ! $(find "$assets" -maxdepth 1 -type f -name '*.properties') ]]; then
+        error "No properties files found in: $assets"
+        return 1
+    fi
 
-# Get some help
-if [[ "$#" -eq 0 ]]; then
-    print_usage
-    exit 1
-fi
+    # Display help if no arguments are provided
+    if [[ "$#" -eq 0 ]]; then
+        print_usage
+        return 1
+    fi
 
-# Parse arguments
-theme=""
-while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-        -h|--help|-help|help|h)
-            print_usage
-            exit 0
-            ;;
-        apply|set)
-            if [[ -z "$2" || "$2" = -* ]]; then
-                theme=$(select_theme) || exit 1
-            else
-                theme="$2"
-                shift
-            fi
-            apply_theme "$theme"
-            ;;
-        dark)
-            apply_theme "$assets/base16-3024-dark.properties"
-            exit "$?"
-            ;;
-        light)
-            apply_theme "$assets/base16-3024-light.properties"
-            exit "$?"
-            ;;
-        -*)
-            error "Unknown option: $1"
-            exit 1
-            ;;
-        *)
-            error "Unknown argument: $1"
-            exit 1
-            ;;
-    esac
-    shift
-done
+    # Parse arguments
+    while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+            -h|--help|-help|help|h)
+                print_usage
+                return 0
+                ;;
+            apply|set)
+                if [[ -z "$2" || "$2" = -* ]]; then
+                    theme=$(select_theme) || exit 1
+                else
+                   theme="$2"
+                   shift
+                fi
+                apply_theme "$theme"
+                ;;
+            dark)
+                apply_theme "${assets}/base16-3024-dark.properties"
+                return "$?"
+                ;;
+            light)
+                apply_theme "${assets}/base16-3024-light.properties"
+                return "$?"
+                ;;
+            -*)
+                error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                error "Unknown argument: $1"
+                return 1
+                ;;
+        esac
+        shift
+    done
+}
+
+main "$@" || exit 1
