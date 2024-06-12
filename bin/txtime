@@ -1,0 +1,53 @@
+#!/usr/bin/env zsh
+
+# Function to convert numbers to words
+function number_to_words {
+    local words=("zero" "one" "two" "three" "four" "five" "six"
+           "seven" "eight" "nine" "ten" "eleven" "twelve" "thirteen"
+           "fourteen" "fifteen" "sixteen" "seventeen" "eighteen"
+           "nineteen" "twenty" "twenty-one" "twenty-two" "twenty-three"
+           "twenty-four" "twenty-five" "twenty-six" "twenty-seven"
+           "twenty-eight" "twenty-nine" "thirty" "thirty-one" "thirty-two"
+           "thirty-three" "thirty-four" "thirty-five" "thirty-six"
+           "thirty-seven" "thirty-eight" "thirty-nine" "forty" "forty-one"
+           "forty-two" "forty-three" "forty-four" "forty-five" "forty-six"
+           "forty-seven" "forty-eight" "forty-nine" "fifty" "fifty-one"
+           "fifty-two" "fifty-three" "fifty-four" "fifty-five" "fifty-six"
+           "fifty-seven" "fifty-eight" "fifty-nine")
+
+    print "${words[$1]}"
+}
+
+# Function to convert time to words
+function time_to_words {
+    local hour="$1"
+    local minute="$2"
+
+    if [[ "$hour" -eq 0 && "$minute" -eq 0 ]]; then
+        print "Midnight"
+    else
+        hour_words=$(number_to_words $hour)
+        minute_words=$(number_to_words $minute)
+        if [[ "$minute" -gt 0 ]]; then
+            print "$hour_words $minute_words hours"
+        else
+            print "$hour_words hundred hours"
+        fi
+    fi
+}
+
+# Script logic
+function main {
+    local current_time=$(date "+%H.%M")
+    local hour=$(date "+%H")
+    local minute=$(date "+%M")
+
+    if [[ "$hour" -eq 0 && "$minute" -eq 0 ]]; then
+        print "The time is now Midnight"
+    else
+        time_in_words=$(time_to_words "$hour" "$minute")
+        print "The time is now $time_in_words"
+    fi
+}
+
+main "$@" || exit 1

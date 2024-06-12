@@ -3,6 +3,7 @@ script_name="$(basename $0)"
 
 # Function to display help message
 function print_usage {
+    print
     print "Usage: $script_name [options] <file>"
     print
     print "This script facilitates the management of Zsh aliases by providing an easy interface to select and edit alias files."
@@ -19,31 +20,34 @@ function error {
     print -P "%B%F{$color}Error%f:%b $message" >&2
 }
 
-# Ensure 'ZSH_ALIAS_DIR' is set
-if [[ -z "$ZSH_ALIAS_DIR" ]]; then
-    error "Unset variable: ZSH_ALIAS_DIR"
-    exit 1
-fi
+# Main function
+function main {
+    local alias_file
 
-# Ensure 'ZSH_ALIAS_DIR' exists
-if [[ ! -d "$ZSH_ALIAS_DIR" ]]; then
-    error "Missing directory: $ZSH_ALIAS_DIR"
-    exit 1
-fi
+    # Ensure 'ZSH_ALIAS_DIR' is set
+    if [[ -z "$ZSH_ALIAS_DIR" ]]; then
+        error "Unset variable: ZSH_ALIAS_DIR"
+        exit 1
+    fi
 
-# Ensure 'ZSH_ALIAS_DIR' is not empty
-if [[ -z $(ls "$ZSH_ALIAS_DIR") ]]; then
-    error "No alias configuration files found in $ZSH_ALIAS_DIR"
-    exit 1
-fi
+    # Ensure 'ZSH_ALIAS_DIR' exists
+    if [[ ! -d "$ZSH_ALIAS_DIR" ]]; then
+        error "Missing directory: $ZSH_ALIAS_DIR"
+        exit 1
+    fi
 
-# Parse arguments
-alias_file=""
-while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-        --help|--help-all|-h|-help|h|help)
-            print_usage
-            exit 0
+    # Ensure 'ZSH_ALIAS_DIR' is not empty
+    if [[ -z $(ls "$ZSH_ALIAS_DIR") ]]; then
+        error "No alias configuration files found in $ZSH_ALIAS_DIR"
+        exit 1
+    fi
+
+    # Parse arguments
+    while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+            --help|--help-all|-h|-help|h|help)
+                print_usage
+                return 0
             ;;
         -*)
             error "Unknown option: $1"
