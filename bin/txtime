@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/data/data/com.termux/files/usr/bin/zsh
 
 # Function to convert numbers to words
 function number_to_words {
